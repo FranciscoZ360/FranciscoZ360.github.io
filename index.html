@@ -266,14 +266,15 @@ footer{border-top:1px solid var(--border);padding:26px 0;color:var(--muted);font
 <script>
   document.getElementById('y').textContent = new Date().getFullYear();
 
-  // Fondo: lluvia de píxeles nítidos que caen por columnas con estela.
+  // Fondo: lluvia de píxeles que cae en diagonal, de la esquina superior derecha
+  // a la inferior izquierda (la cuadrícula se dibuja rotada 45°).
   (() => {
     const cv = document.getElementById('bg');
     const ctx = cv.getContext('2d');
     const CELL = 12, GAP = 2;
     const A = [56, 189, 248], B = [167, 139, 250];
     const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    let W, H, cols, rows, drops;
+    let W, H, S, cols, rows, drops;
 
     const rnd = (a, b) => a + Math.random() * (b - a);
     const mk = (c, start) => ({
@@ -287,18 +288,25 @@ footer{border-top:1px solid var(--border);padding:26px 0;color:var(--muted);font
       W = innerWidth; H = innerHeight;
       cv.width = W * dpr; cv.height = H * dpr;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      cols = Math.ceil(W / CELL); rows = Math.ceil(H / CELL);
+      S = W + H;                       // lado del cuadrado rotado que cubre toda la pantalla
+      cols = Math.ceil(S / CELL); rows = cols;
       drops = [];
       for (let c = 0; c < cols; c++) {
-        const k = Math.random() < .35 ? 2 : 1;
-        if (Math.random() < .6) for (let i = 0; i < k; i++) drops.push(mk(c, true));
+        const k = Math.random() < .5 ? 3 : 2;
+        if (Math.random() < .9) for (let i = 0; i < k; i++) drops.push(mk(c, true));
       }
     }
 
     let last = 0;
     function frame(ms) {
       const dt = Math.min((ms - last) / 1000, .05); last = ms;
-      ctx.clearRect(0, 0, W, H);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      const dpr = cv.width / W;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.translate(W / 2, H / 2);
+      ctx.rotate(Math.PI / 4);         // el eje "abajo" apunta hacia abajo-izquierda
+      ctx.translate(-S / 2, -S / 2);
       for (const d of drops) {
         d.y += d.v * dt;
         if (d.y - d.len > rows) Object.assign(d, mk(d.c, false));
